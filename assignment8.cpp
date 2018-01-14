@@ -10,6 +10,7 @@ using std::vector;
 using std::cout;
 using std::endl;
 
+//Finding the distance between two nodes
 float RRT::Dist(Node Node1, Node Node2){
   float x_1, x_2, y_1, y_2, x_square, y_square, dist, min_dist, size;
   x_1 = Node1.x;
@@ -22,6 +23,7 @@ float RRT::Dist(Node Node1, Node Node2){
   return dist;    
   }
 
+//Finding the octant of the slope pbetween two points
 int RRT::FindOctant(float slope, int x_diff, int y_diff){
   if(0 <= slope && slope <= 1) {
     if(x_diff >= 0) {return 0;}
@@ -43,14 +45,9 @@ int RRT::FindOctant(float slope, int x_diff, int y_diff){
 } 
 
 
-
-
-
-//The distance formula is d = sqrt((x_2-x_1)^2 + (y_2-y_1)^2)
+//Finding the nearest existing neighbor in node_vector to input_node
 Node RRT::NearestNeighbor(vector<Node> node_vector, Node input_node) {
-  // cout << "node_vector.at(0) id and pid are: " << node_vector.at(0).id << " " << node_vector.at(0).parent_id << endl;
 	Node closest_node = node_vector.at(0);
-  // cout << "closest_node's id and parent id at start are: " << closest_node.id << " " << closest_node.parent_id << endl;
   int min_dist = 999999; //arbitrary large number for initialization
  	int size = node_vector.size();
   int dist;
@@ -62,10 +59,10 @@ Node RRT::NearestNeighbor(vector<Node> node_vector, Node input_node) {
  			closest_node = node_vector.at(i);
  		}
  	}
-  // cout << "closest_node's id and parent id at end are: " << closest_node.id << " " << closest_node.parent_id << endl;
  	return closest_node;
 }
 
+//Finding if there is a wall between the two given nodes
 bool RRT::CheckCollision(Node start, Node end) {
  	/*
  	// begin by drawing a line of nodes with proper x and y values
@@ -81,7 +78,6 @@ bool RRT::CheckCollision(Node start, Node end) {
   y1 = end.y;
   dy = y1-y0;
   dx = x1-x0;
-  // cout <<"dy and dx are: " << dy << " " << dx << endl;
   if(dx == 0) {
     x = x0;
     int start_point, end_point;
@@ -93,24 +89,17 @@ bool RRT::CheckCollision(Node start, Node end) {
       start_point = y1;
       end_point = y0;
     }
-    // cout << "starting at: " << start_point << " and ending at: " << end_point << endl;
     for(y = start_point; y <= end_point; ++y){
-      // cout << " current pixel is: (" << x << ", " << y << ")" << endl;
       if(this->image(x, y) == 0) {
-        // cout << "vertical line collision!" << endl;
         return true;
       }
     }
   }
   else{
-    // cout << "non vertical line!" << endl;
     float fdy = dy;
     float fdx = dx;
     slope = fdy/fdx;
-    // cout << "the slope is: " << slope << endl;
     octant = FindOctant(slope, dx, dy);
-    // cout << "start pixel: (" << x0 << ", " << y0 << "), end pixel: (" << x1 << ", " << y1 << ")" << endl;
-    // cout << "current slope and octant: " << slope << " " << octant << endl;
     int start_x, end_x, start_y, end_y;
     start_x = x0;
     end_x = x1;
@@ -120,19 +109,13 @@ bool RRT::CheckCollision(Node start, Node end) {
     SwitchOctantStart(octant, end_x, end_y);
     dy = end_y-start_y;
     dx = end_x-start_x;
-    // cout <<"dy and dx are: " << dy << " " << dx << endl;
     D = 2*dy - dx;
 
     for(x = x0, y = y0; start_x <= end_x; ++start_x){
-      // cout << " proper pixel is: (" << x << ", " << y << ")" << endl;
       if(this->image(x, y) == 0) {
-        // cout << "there is a collision!" << endl;
         return true;
       }
       SwitchOctantStart(octant, x, y);
-      // cout << " bresenham pixel is: (" << x << ", " << y << ")" << endl;
-
-      // cout << "D = " << D << endl;
       if(D >= 0) {
         ++y;
         D = D - 2*dx;
@@ -143,15 +126,13 @@ bool RRT::CheckCollision(Node start, Node end) {
     }
 
  }
-  // cout << "no collision found!" << endl;
   return false;
 }
 
   
-
+//Finds a path between two nodes given the locations of the nodes, how close it needs to get to the end node,
+//and how far each intermediate node can travel
 vector<Node> RRT::FindPath(Node start, Node end, int goal_radius, int extension_distance) {
-  // cimg_library::CImg<unsigned char> new_image = this->image;
-  // cimg_library::CImgDisplay display(new_image);
   vector<Node> existing_nodes; 
   vector<Node> final_path;
   Node new_node(0,0);
@@ -160,54 +141,35 @@ vector<Node> RRT::FindPath(Node start, Node end, int goal_radius, int extension_
   start.parent_id = -1;
   existing_nodes.push_back(start);
   Node nearest_node = start;
-  // cout << nearest_node.id << " " << nearest_node.parent_id << endl;
   int dist = Dist(start, end);
   while(dist > goal_radius){
     int x_rand = rand() % image.width();
     int y_rand = rand() % image.height();
     Node rand_sample(x_rand, y_rand);
     nearest_node = NearestNeighbor(existing_nodes, rand_sample);
-  // cout << nearest_node.id << " " << nearest_node.parent_id << endl;
 
     if(Dist(rand_sample,nearest_node) > extension_distance){
       new_node = Project(rand_sample, nearest_node, extension_distance);
-      // float test = Dist(nearest_node, new_node);
-      // cout << test << endl;
       if(!(CheckCollision(nearest_node, new_node))){
         ++index;
-        // cout << "current index is: " << index << endl;
         new_node.parent_id = nearest_node.id;
-        // cout << "id of nearest_node: " << nearest_node.id << endl;
         new_node.id = index;
         existing_nodes.push_back(new_node);
         dist = Dist(new_node, end);
-        // const unsigned char color[] = {200};
-        // const unsigned char dColor[] = {100};
-        // int x = new_node.x;
-        // int y = new_node.y;
-        // new_image.draw_circle(x,y,3,color);
-        // if(nearest_node.parent_id != -1) {
-        //   int x1 = nearest_node.x;
-        //   int y1 = nearest_node.y;
-        //   new_image.draw_line(x, y, x1, y1, dColor).display(display);
-        // }
 
       }
     }
   } 
-  // cout << "finished creating the node vector" << endl;
   while(new_node.parent_id != -1){
-    // cout << "current node id is: " << new_node.id << endl;
-    // cout << "current parent id is: " << new_node.parent_id << endl;
     final_path.push_back(new_node);
     new_node = existing_nodes.at(new_node.parent_id);
   }
   final_path.push_back(start);
   DrawRRT(existing_nodes);
-  // DrawPath(final_path);
   return final_path;
 }
 
+//Placing a new node a set distance away from the root node
 Node RRT::Project(Node project, Node root, int radius) {
   int x, y, dx, dy;
   dx = project.x - root.x;
@@ -220,7 +182,7 @@ Node RRT::Project(Node project, Node root, int radius) {
   return new_node;
 }
 
-
+//Changing the octant of the slope in order to use Bresenham's Line Algorithm
 void RRT::SwitchOctantStart(int octant, int &x, int &y){
   int temp;
   switch(octant){ 
@@ -265,7 +227,7 @@ void RRT::SwitchOctantStart(int octant, int &x, int &y){
       break;
     }
 }
-
+//Switching back to original octant
 void RRT::SwitchOctantEnd(int octant, int &x, int &y){
   int temp;
   switch(octant) { 
@@ -311,7 +273,7 @@ void RRT::SwitchOctantEnd(int octant, int &x, int &y){
       break;
     }
 }
-
+//Viewing the completed path using CImg class
 void RRT::DrawRRT(vector<Node> existing_nodes){
   const unsigned char color[] = {200};
   const unsigned char dColor[] = {100};
@@ -333,6 +295,7 @@ void RRT::DrawRRT(vector<Node> existing_nodes){
   }
 }
 
+//Viewing the path as it gets created
 void RRT::DrawPath(vector<Node> Path){
   const unsigned char color[] = {200};
   const unsigned char dColor[] = {100};
